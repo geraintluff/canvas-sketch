@@ -1,0 +1,177 @@
+<style>
+	canvas {
+		border: 1px solid black;
+		border-radius: 5px;
+		margin-right: 1em;
+	}
+</style>
+Drag and drop an image into this box to process it:<br>
+<canvas id="target"></canvas><br>
+Greyscale: <input type="checkbox" id="greyscale" checked><br>
+Level steps: <select id="levelSteps">
+	<option value="2">2</option>
+	<option value="3">3</option>
+	<option value="4">4</option>
+	<option value="5">5</option>
+	<option value="6" selected>6</option>
+</select><br>
+Line alpha: <select id="lineAlpha">
+	<option value="0.05">0.05</option>
+	<option value="0.1" selected>0.1</option>
+	<option value="0.2">0.2</option>
+	<option value="0.5">0.5</option>
+</select><br>
+Line thickness: <select id="lineThickness">
+	<option value="0.5">0.5</option>
+	<option value="1">1</option>
+	<option value="2" selected>2</option>
+	<option value="3">3</option>
+	<option value="5">5</option>
+	<option value="10">10</option>
+</select><br>
+Line density: <select id="lineDensity">
+	<option value="0.25">0.25</option>
+	<option value="0.5" selected>0.5</option>
+	<option value="1">1</option>
+</select><br>
+Lightness: <select id="lightness">
+	<option value="1">1</option>
+	<option value="2">2</option>
+	<option value="4" selected>4</option>
+	<option value="8">8</option>
+</select><br>
+Edge thickness: <select id="edgeThickness">
+	<option value="2" selected>2</option>
+	<option value="3">3</option>
+	<option value="5">5</option>
+	<option value="10">10</option>
+</select><br>
+Edge amount: <select id="edgeAmount">
+	<option value="0">0</option>
+	<option value="0.5" selected>0.5</option>
+	<option value="1">1</option>
+	<option value="2">2</option>
+</select><br>
+<hr>
+Base64 value:<Br>
+<textarea id="base64-data" style="width: 100%; height: 5em;"></textarea><br>
+<a href="#" id="base64-link">Open in new window</a>
+
+<script src="sketch.js"></script>
+<script src="jszip.js"></script>
+<script>
+	document.title = "Drag and drop image to convert";
+	document.getElementById("base64-link").onclick = function () {
+		window.open(this.getAttribute("href"));
+		return false;
+	};
+	var canvas = document.getElementById("target");
+	
+	canvas.addEventListener('dragover', function (evt) {
+		evt.preventDefault();
+	}, false);
+	canvas.addEventListener('drop', getfiles, false);
+	function getfiles(ev) {
+		ev.preventDefault();
+		var files = [];
+		for (var i = 0; i < ev.dataTransfer.files.length; i++) {
+			files.push(ev.dataTransfer.files[i]);
+		}
+		if (files.length == 1) {
+			var file = files[0];
+			if (file.type.indexOf('image') === -1 ) {
+				return;
+			}
+			var reader = new FileReader();
+			reader.readAsDataURL(file);
+			reader.onload = function ( ev ) {
+				var img = new Image();
+				img.src = ev.target.result;
+				img.onload = function() {
+					document.getElementById("base64-data").value = "Processing...";
+					processImage(img);
+				};
+			};
+		} else if (files.length > 1) {
+			var frameZip = new JSZip();
+			var imageCounter = 0;
+			function processNext() {
+				if (files.length > 0) {
+					var file = files.shift();
+					var filename = file.name;
+					document.title = "Processing: " + filename;
+					document.getElementById("base64-data").value = "Processing: " + filename;
+					if (file.type.indexOf('image') === -1 ) {
+						processNext();
+					}
+					var reader = new FileReader();
+					reader.readAsDataURL(file);
+					reader.onload = function ( ev ) {
+						var img = new Image();
+						img.src = ev.target.result;
+						img.onload = function() {
+							var sketcher = processImage(img, imageCounter != 0);
+							sketcher.whenReady(function () {
+								imageCounter++;
+								filename = filename.split(".");
+								filename = filename.slice(0, filename.length - 1);
+								filename = filename.join(".") + ".png";
+								var dataUrl = canvas.toDataURL();
+								var base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+								frameZip.file(filename, base64, {base64: true});
+								window.setTimeout(processNext, 100);
+							});
+						};
+					};
+				} else if (imageCounter > 0) {
+					var content = frameZip.generate();
+					document.getElementById("base64-data").value = content;
+					document.getElementById("base64-link").setAttribute("href", "#");
+				}
+			}
+			processNext();
+		}
+	};
+	
+	function processImage(img, noInitialPreview) {
+		var context = canvas.getContext("2d");
+		if (img.width != canvas.width || img.height != canvas.height) {
+			canvas.width = img.width;
+			canvas.height = img.height;
+			noInitialPreview = false;
+		}
+		if (!noInitialPreview) {
+			context.drawImage(img, 0, 0, canvas.width, canvas.height);
+		}
+		var sketcher = new Sketcher(canvas.width, canvas.height);
+		sketcher.levelSteps = parseFloat(document.getElementById('levelSteps').value);
+		sketcher.lineAlpha = parseFloat(document.getElementById('lineAlpha').value);
+		sketcher.lineThickness = parseFloat(document.getElementById('lineThickness').value);
+		sketcher.lineDensity = parseFloat(document.getElementById('lineDensity').value);
+		sketcher.lightness = parseFloat(document.getElementById('lightness').value);
+		sketcher.edgeBlurAmount = parseFloat(document.getElementById('edgeThickness').value);
+		sketcher.edgeAmount = parseFloat(document.getElementById('edgeAmount').value);
+		sketcher.progressUpdate(function (proportion, message) {
+			console.log((Math.round(proportion*1000)/10) + "% done - " + message);
+			document.title = (Math.round(proportion*1000)/10) + "% done - " + message;
+		});
+		var greyscale = !!document.getElementById("greyscale").checked;
+
+		document.getElementById("base64-link").setAttribute('href', "#");
+		document.title = "Transforming canvas...";
+		console.log("Transforming canvas...");
+
+		context.drawImage(img, 0, 0, canvas.width, canvas.height);
+		sketcher.transformCanvas(canvas, greyscale).whenReady(function () {
+			console.log("Done!");
+			document.title = "Sketch completed";
+
+			var dataUrl = canvas.toDataURL();
+			document.getElementById("base64-link").setAttribute('href', dataUrl);
+			var base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+			document.getElementById("base64-data").value = base64;
+		});
+		return sketcher;
+	}
+	
+</script>
