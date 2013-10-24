@@ -1,0 +1,15 @@
+{
+	"input": "source/",
+	"output": "animation-results/",
+	"greyscale": true,
+	"levelSteps": 5,
+	"maxTextures": 200,
+	"lineAlpha": 0.3,
+	"lineAlphaVariation": 0.2,
+	"lineThickness": 5,
+	"lineDensity": 0.5,
+	"lightness": 4,
+	"edgeBlurAmount": 5,
+	"edgeAmount": 0.6,
+	"edgeAmountVariation": 0.2
+}
