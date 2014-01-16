@@ -22,3 +22,9 @@ The config is in `batch-animation.json`.  Note the `lineAlphaVariation` and `edg
 The goal is to replicate the effect of tracing video frames using pencil sketches, where each frame will not turn out completely consistently:
 
 ![GIF animation, from a video of a fruit bowl](100-coarse-random.gif)
+
+## License
+
+The code is available as "public domain", meaning that it is completely free to use, without any restrictions at all (including re-licensing under your own terms).  Read the full license [here](http://geraintluff.github.com/tv4/LICENSE.txt).
+
+It's also available under an [MIT license](http://jsonary.com/LICENSE.txt).
